@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-paper-50 text-ink-950 dark:bg-ink-950 dark:text-paper-50 font-body antialiased;
+}
+
+* {
+  @apply border-ink-950/10 dark:border-paper-50/10;
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid #5b4cf5;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-ink-950/15 dark:bg-paper-50/15 rounded-full;
+}
+
+.glass {
+  @apply bg-white/60 dark:bg-ink-900/60 backdrop-blur-xl border border-white/40 dark:border-white/5;
+}
+
+.chip {
+  @apply rounded-full border border-ink-950/15 px-4 py-1.5 text-sm font-medium transition-colors hover:bg-ink-950/5 dark:border-white/15 dark:hover:bg-white/10;
+}
