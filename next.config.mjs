@@ -26,7 +26,11 @@ function buildCsp() {
     `font-src 'self' data:`,
     // 'self' covers our own /api/exchange-rates etc.; the CDN hosts above
     // cover model/wasm downloads; ws: is only needed for dev-mode HMR.
-    `connect-src 'self' ${EXTERNAL_ASSET_HOSTS.join(" ")}${isDev ? " ws:" : ""}`,
+    // 'blob:' is needed because @imgly/background-removal downloads its
+    // model, wraps it in a local blob: URL via URL.createObjectURL, and
+    // then fetch()es that blob URL — that fetch is governed by connect-src,
+    // just like any other network-facing request the page makes.
+    `connect-src 'self' blob: ${EXTERNAL_ASSET_HOSTS.join(" ")}${isDev ? " ws:" : ""}`,
     // ffmpeg.wasm creates its worker from a blob: URL. Tesseract.js instead
     // instantiates its worker directly against a jsdelivr URL by default —
     // so worker-src needs the CDN hosts too, not just 'self' and blob:.
