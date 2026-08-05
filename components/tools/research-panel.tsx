@@ -1,57 +1,69 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ExternalLink, MessageSquare, ArrowUp, Youtube, ShoppingBag } from "lucide-react";
-import { StatusBanner } from "@/components/tools/tool-shell";
-import { extractFrequentTerms, type TermFrequency } from "@/lib/keyword-extraction";
+import { Search, Youtube, ShoppingBag, MessageCircle, Scale, Globe, ExternalLink } from "lucide-react";
 
-interface RedditPost {
-  title: string;
-  subreddit: string;
-  score: number;
-  numComments: number;
-  permalink: string;
-  selftext: string;
+interface SearchSource {
+  id: string;
+  label: string;
+  description: string;
+  icon: typeof Youtube;
+  buildUrl: (q: string) => string;
 }
+
+const SOURCES: SearchSource[] = [
+  {
+    id: "youtube",
+    label: "Reviews en YouTube",
+    description: "Videos de desempaquetado, pruebas y comparativas.",
+    icon: Youtube,
+    buildUrl: (q) => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${q} review comparativa`)}`
+  },
+  {
+    id: "reddit",
+    label: "Discusiones en Reddit",
+    description: "Opiniones reales de gente que ya lo compró o lo usa.",
+    icon: MessageCircle,
+    buildUrl: (q) => `https://www.google.com/search?q=${encodeURIComponent(`site:reddit.com ${q}`)}`
+  },
+  {
+    id: "shopping",
+    label: "Comparar precios",
+    description: "Precios en distintas tiendas para el mismo producto.",
+    icon: ShoppingBag,
+    buildUrl: (q) => `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(q)}`
+  },
+  {
+    id: "comparativas",
+    label: "Comparativas y foros",
+    description: "Artículos tipo \"mejores opciones\" y foros especializados.",
+    icon: Scale,
+    buildUrl: (q) => `https://www.google.com/search?q=${encodeURIComponent(`${q} comparativa opiniones cual comprar`)}`
+  },
+  {
+    id: "general",
+    label: "Búsqueda general",
+    description: "Por si preferís explorar vos mismo desde cero.",
+    icon: Globe,
+    buildUrl: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`
+  }
+];
 
 export function ResearchPanel() {
   const [query, setQuery] = useState("");
-  const [posts, setPosts] = useState<RedditPost[] | null>(null);
-  const [terms, setTerms] = useState<TermFrequency[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const [searchedFor, setSearchedFor] = useState("");
 
-  async function search() {
+  function search() {
     if (!query.trim()) return;
-    setBusy(true);
-    setError("");
-    setPosts(null);
-    setSearchedFor(query);
-    try {
-      const response = await fetch(`/api/reddit-search?q=${encodeURIComponent(query)}`);
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.error || "Error desconocido");
-      const foundPosts: RedditPost[] = json.posts;
-      setPosts(foundPosts);
-      setTerms(extractFrequentTerms(foundPosts.map((p) => `${p.title} ${p.selftext}`)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo completar la búsqueda.");
-      setPosts([]); // still show the YouTube/Shopping quick links below even if Reddit failed
-    } finally {
-      setBusy(false);
-    }
+    setSearchedFor(query.trim());
   }
-
-  const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${searchedFor} review comparativa`)}`;
-  const shoppingUrl = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(searchedFor)}`;
 
   return (
     <div>
       <div className="rounded-xl2 border border-amber-500/25 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-400">
-        Esto busca discusiones <strong>reales</strong> en Reddit y detecta automáticamente qué palabras se repiten más —
-        no es una IA redactando una conclusión, es información real para que decidas vos, más rápido que buscando a
-        mano.
+        Esto no es una IA leyendo reseñas por vos — es un lanzador de búsquedas ya armadas hacia los lugares donde
+        realmente está la información (Reddit, YouTube, tiendas), para que llegues en un clic en vez de escribir
+        cada búsqueda a mano.
       </div>
 
       <div className="mt-5 flex gap-2">
@@ -64,76 +76,34 @@ export function ResearchPanel() {
         />
         <button
           onClick={search}
-          disabled={!query.trim() || busy}
+          disabled={!query.trim()}
           className="inline-flex items-center gap-1.5 rounded-full bg-signal-gradient px-5 py-3 text-sm font-medium text-white disabled:opacity-50"
         >
-          <Search size={15} /> {busy ? "Buscando…" : "Investigar"}
+          <Search size={15} /> Investigar
         </button>
       </div>
 
-      {error && (
-        <div className="mt-4">
-          <StatusBanner kind="error">{error}</StatusBanner>
-        </div>
-      )}
-
-      {posts && (
-        <div className="mt-8 space-y-8">
-          <div className="flex flex-wrap gap-2">
-            <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="chip inline-flex items-center gap-1.5">
-              <Youtube size={14} /> Ver reviews en YouTube
-            </a>
-            <a href={shoppingUrl} target="_blank" rel="noopener noreferrer" className="chip inline-flex items-center gap-1.5">
-              <ShoppingBag size={14} /> Comparar precios en Google Shopping
-            </a>
-          </div>
-
-          {terms.length > 0 && (
-            <div>
-              <p className="text-sm font-semibold">Palabras que más se repiten en las discusiones encontradas</p>
-              <p className="text-xs text-ink-950/45 dark:text-white/45">
-                Cuanto más grande, más posts distintos la mencionan. Es un conteo automático, no una interpretación.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {terms.map((t) => (
-                  <span
-                    key={t.term}
-                    className="rounded-full bg-signal-violet/10 px-3 py-1 font-medium text-signal-violet"
-                    style={{ fontSize: `${Math.min(11 + t.count * 1.5, 20)}px` }}
-                  >
-                    {t.term} <span className="opacity-50">×{t.count}</span>
-                  </span>
-                ))}
+      {searchedFor && (
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {SOURCES.map((source) => (
+            <a
+              key={source.id}
+              href={source.buildUrl(searchedFor)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-3 rounded-xl2 border border-ink-950/8 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-signal-violet/40 dark:border-white/8 dark:bg-ink-900"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-signal-gradient text-white">
+                <source.icon size={18} />
+              </span>
+              <div className="flex-1">
+                <p className="flex items-center gap-1.5 font-medium">
+                  {source.label} <ExternalLink size={12} className="text-ink-950/30 dark:text-white/30" />
+                </p>
+                <p className="mt-0.5 text-sm text-ink-950/55 dark:text-white/55">{source.description}</p>
               </div>
-            </div>
-          )}
-
-          <div>
-            <p className="mb-3 text-sm font-semibold">
-              {posts.length > 0 ? `${posts.length} discusiones encontradas en Reddit` : "Sin resultados en Reddit para esta búsqueda"}
-            </p>
-            <div className="space-y-3">
-              {posts.map((post, i) => (
-                <a
-                  key={i}
-                  href={post.permalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block rounded-xl2 border border-ink-950/8 bg-white p-4 transition-colors hover:border-signal-violet/40 dark:border-white/8 dark:bg-ink-900"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-medium">{post.title}</p>
-                    <ExternalLink size={14} className="mt-0.5 shrink-0 text-ink-950/30 dark:text-white/30" />
-                  </div>
-                  <div className="mt-2 flex items-center gap-4 text-xs text-ink-950/50 dark:text-white/50">
-                    <span>{post.subreddit}</span>
-                    <span className="inline-flex items-center gap-1"><ArrowUp size={12} /> {post.score}</span>
-                    <span className="inline-flex items-center gap-1"><MessageSquare size={12} /> {post.numComments}</span>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </div>
+            </a>
+          ))}
         </div>
       )}
     </div>

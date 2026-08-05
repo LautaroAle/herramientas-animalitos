@@ -39,7 +39,7 @@ servidor, así que no hay costo de infraestructura ni riesgo de privacidad:
 | Firmas de email | `/herramientas/firma-email` | HTML basado en tablas (compatible con Gmail/Outlook), vista previa, copiar como HTML enriquecido, exportar .html y .png |
 | Constructor de currículum | `/herramientas/cv` | Plantilla moderna (con foto/color) y plantilla ATS (texto plano, sin columnas), exporta a PDF, autoguardado local + exportar/importar proyecto en .json |
 | Generador de documentos | `/herramientas/documentos` | Detección de intención por palabras clave, subida opcional de PDF de referencia con datos auto-detectados, y asistente de preguntas (una a la vez) para carta de renuncia, reclamo formal, descargo, contrato de alquiler simple, carta de presentación y nota para el colegio. Genera PDF y Word. Sin IA: plantillas con lógica condicional, 100% confiable |
-| Panel de investigación | `/herramientas/investigacion` | Búsqueda real en Reddit (API pública, sin key) + detección automática de palabras que más se repiten + accesos directos a YouTube y Google Shopping |
+| Panel de investigación | `/herramientas/investigacion` | Lanzador de búsquedas ya armadas hacia Reddit, YouTube, Google Shopping y comparativas — sin API externa, no puede romperse |
 
 Cualquier otro slug de herramienta listado en `lib/tools-registry.ts` con
 `implemented: false` renderiza automáticamente una página "próximamente" con
@@ -107,35 +107,12 @@ conseguir/crear la credencial correspondiente, y las implemento contra la
 interfaz ya definida — así cada pieza nueva es real desde el día uno, en vez
 de un mock que hay que rehacer después.
 
-### Panel de investigación — configurar la búsqueda en Reddit
-
-Reddit cerró el acceso anónimo a su API en mayo de 2026 (ahora responde error
-403 sin excepción). El panel de investigación ya está migrado a la API
-oficial de Reddit, que sigue siendo **gratis** (sin tarjeta, ~100
-consultas/minuto), pero necesita una credencial. Pasos:
-
-1. Entrá a [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) con tu cuenta de Reddit (creá una si no tenés).
-2. Al final de la página, hacé clic en **"create another app..."**.
-3. Elegí el tipo **"script"**.
-4. En "redirect uri" poné cualquier URL válida, por ejemplo `http://localhost:8080` (no se usa para este caso, pero el campo es obligatorio).
-5. Hacé clic en **"create app"**.
-6. Anotá dos valores: el **client ID** (el texto corto que aparece debajo del nombre de la app) y el **secret** (el campo que dice "secret").
-7. En Vercel: andá a tu proyecto → **Settings → Environment Variables**, y agregá:
-   - `REDDIT_CLIENT_ID` = el client ID que copiaste
-   - `REDDIT_CLIENT_SECRET` = el secret que copiaste
-8. Redeploy el proyecto para que tome las variables nuevas.
-
-**Si Reddit no te aprueba la app** (en 2026 algunas apps chicas pasan por una
-revisión manual): el panel sigue mostrando los accesos directos a YouTube y
-Google Shopping igual, así que no queda totalmente roto — avisame si te pasa
-esto y armamos una fuente de datos alternativa.
-
 
 
 Estas dos herramientas se construyeron deliberadamente **sin depender de una IA de pago** (a pedido explícito, para no exponer al dueño del sitio a costos por uso impredecibles):
 
 - **Generador de documentos**: en vez de un chatbot libre, usa plantillas con lógica condicional que yo mismo redacté (`lib/document-templates/`). Es más confiable que un LLM para este caso — cero riesgo de que "invente" algo mal en un documento formal — pero cubre 4 tipos de documento hoy (renuncia, reclamo, presentación, nota de colegio). Agregar uno nuevo (contrato simple, descargo, presupuesto) es escribir un archivo de plantilla nuevo, no tocar el motor.
-- **Panel de investigación**: sin LLM no hay forma honesta de generar una "conclusión" redactada — así que en cambio busca discusiones reales en Reddit (API pública, sin key) y calcula qué palabras se repiten más entre varios posts distintos (conteo de frecuencia real, no una interpretación de IA), además de accesos directos a YouTube y Google Shopping. Es un panel de agregación honesto, no un analista de IA.
+- **Panel de investigación**: sin LLM no hay forma honesta de generar una "conclusión" redactada — así que en cambio es un lanzador de búsquedas ya armadas (Reddit vía Google, YouTube, Google Shopping, comparativas). Cero APIs externas, cero configuración, no puede romperse por un cambio de política de un tercero.
 
 Si en el futuro se decide sumar una clave de API de un LLM (Anthropic, Google Gemini, etc.), ambas herramientas están armadas para que esa pieza se agregue como una capa adicional sin rehacer la arquitectura.
 
