@@ -10,14 +10,11 @@ const isDev = process.env.NODE_ENV !== "production";
 const EXTERNAL_ASSET_HOSTS = ["https://staticimgly.com", "https://cdn.jsdelivr.net", "https://unpkg.com"];
 
 function buildCsp() {
-  const baseScriptSrc = isDev
-    ? `'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:`
-    : `'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:`;
-  // Tesseract.js spawns its worker from a blob: URL whose body is
-  // `importScripts("https://cdn.jsdelivr.net/...")`. That importScripts()
-  // call is governed by script-src (not worker-src or connect-src), so the
-  // CDN hosts need to be allowed here too, or the worker fails to load.
-  const scriptSrc = `${baseScriptSrc} ${EXTERNAL_ASSET_HOSTS.join(" ")}`;
+  // 'unsafe-eval' is required in both dev (Next.js Fast Refresh) and
+  // production: @imgly/background-removal's WASM engine (onnxruntime-web)
+  // uses real eval()/Function() in its threading glue code, not just
+  // WebAssembly compilation — 'wasm-unsafe-eval' alone isn't enough for it.
+  const scriptSrc = `'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: ${EXTERNAL_ASSET_HOSTS.join(" ")}`;
   return [
     `default-src 'self'`,
     `script-src ${scriptSrc}`,
@@ -55,17 +52,6 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           { key: "Content-Security-Policy", value: buildCsp() }
-        ]
-      },
-      {
-        // @imgly/background-removal's own docs specify these exact two
-        // header values as required for its WASM model to run reliably
-        // (SharedArrayBuffer needs cross-origin isolation). Scoped to just
-        // this route so it can't affect the other tools on the site.
-        source: "/herramientas/imagenes",
-        headers: [
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" }
         ]
       }
     ];
